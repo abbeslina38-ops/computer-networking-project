@@ -373,6 +373,315 @@ Some parts can still be improved, including:
 
 ---
 
+
+## Robot Program
+
+### Description
+
+The robot program represents a robot connected to the control station through the network.
+
+Each robot:
+
+* Connects to the control station using **TCP**.
+* Receives commands from the control station using TCP.
+* Processes the received commands and updates its information.
+* Sends its updated information to the control station using **UDP**.
+* Uses a separate thread for receiving commands and another thread for sending information.
+* Uses a mutex to protect the robot information when it is accessed by different threads.
+
+The robot is represented using a C++ `Robot` class.
+
+### Robot Class
+
+The `Robot` class stores the main information about the robot:
+
+```cpp
+class Robot{
+public:
+    string state;
+    float x, y, velocity;
+    int id;
+};
+```
+
+The robot contains:
+
+| Information | Description                |
+| :---------- | :------------------------- |
+| `id`        | Unique robot identifier    |
+| `x`         | Robot X position           |
+| `y`         | Robot Y position           |
+| `velocity`  | Current robot velocity     |
+| `state`     | Current state of the robot |
+
+The robot information is initialized using the `sett()` function:
+
+```cpp
+void sett(int i, float xx, float yy, float v, string s)
+```
+
+The user enters the robot ID, position, velocity, and initial state when the program starts.
+
+### TCP Communication
+
+TCP is used by the robot to receive commands from the control station.
+
+The robot creates a TCP socket:
+
+```cpp
+SOCKET clientSocket1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+```
+
+It then connects to the control station using:
+
+```text
+IP Address: 192.168.100.34
+Port: 5000
+```
+
+The connection is established using:
+
+```cpp
+connect()
+```
+
+After connecting, the robot continuously waits for commands from the control station using:
+
+```cpp
+recv()
+```
+
+The received commands are stored temporarily in a queue:
+
+```cpp
+queue<string> commands;
+```
+
+### Robot Commands
+
+The robot currently handles the following commands:
+
+#### `demarrer`
+
+When the robot receives:
+
+```text
+demarrer
+```
+
+its state changes to:
+
+```text
+EN-MARCHE
+```
+
+#### `arreter`
+
+When the robot receives:
+
+```text
+arreter
+```
+
+its state changes to:
+
+```text
+ARRET
+```
+
+#### `changer la vitesse`
+
+When the robot receives:
+
+```text
+changer la vitesse
+```
+
+its velocity is changed to:
+
+```text
+30
+```
+
+#### `done`
+
+When the robot receives:
+
+```text
+done
+```
+
+the TCP communication loop is stopped and the robot finishes its communication with the control station.
+
+### UDP Communication
+
+UDP is used by the robot to send its information to the control station.
+
+The robot creates a UDP socket:
+
+```cpp
+SOCKET robotSocket1 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+```
+
+The information is sent to the control station on:
+
+```text
+Port: 5001
+```
+
+The robot sends its information using:
+
+```cpp
+sendto()
+```
+
+The information is formatted as:
+
+```text
+id=1;x=4.000000;y=5.000000;velocity=7.000000;state=EN-MARCHE
+```
+
+The message contains:
+
+* Robot ID
+* X position
+* Y position
+* Velocity
+* Robot state
+
+### Robot Information Thread
+
+The function:
+
+```cpp
+sendrobotinfo1()
+```
+
+is responsible for sending the robot's information to the control station.
+
+The robot waits for the `sendinfo` flag to become `true`.
+
+Once a command has been processed, the flag is activated:
+
+```cpp
+sendinfo = true;
+```
+
+The information thread then:
+
+1. Waits for one second.
+2. Locks the robot information using the mutex.
+3. Creates the robot information message.
+4. Sends the message using UDP.
+5. Resets `sendinfo` to `false`.
+
+### Command Reception Thread
+
+The function:
+
+```cpp
+recvcommand1()
+```
+
+is responsible for receiving commands from the control station.
+
+It:
+
+1. Creates the TCP socket.
+2. Connects to the control station.
+3. Waits for commands using `recv()`.
+4. Stores the received command in a queue.
+5. Processes the command.
+6. Updates the robot state or velocity.
+7. Activates the `sendinfo` flag.
+8. Continues waiting for the next command.
+
+### Multithreading
+
+The robot uses two threads:
+
+```cpp
+thread recv1(recvcommand1, ref(sendinfo));
+thread sen1(sendrobotinfo1, ref(sendinfo));
+```
+
+The first thread receives and processes commands.
+
+The second thread sends the robot's updated information to the control station.
+
+This allows the robot to handle TCP reception and UDP transmission separately.
+
+### Mutex
+
+Because both threads access the robot information, a mutex is used:
+
+```cpp
+mutex robotmutex;
+```
+
+The robot information is protected using:
+
+```cpp
+lock_guard<mutex> lock(robotmutex);
+```
+
+This prevents both threads from modifying or reading the robot information at the same time and helps avoid data conflicts.
+
+### Robot Program Flow
+
+The robot program follows this process:
+
+1. Start the robot program.
+2. Initialize Winsock.
+3. Ask the user for the robot ID.
+4. Ask for the robot's X position.
+5. Ask for the robot's Y position.
+6. Ask for the robot's velocity.
+7. Ask for the robot's initial state.
+8. Initialize the `Robot` object.
+9. Create the TCP command-reception thread.
+10. Create the UDP information-sending thread.
+11. Connect to the control station using TCP.
+12. Wait for commands.
+13. Process the received command.
+14. Update the robot information.
+15. Send the updated information to the control station using UDP.
+16. Continue until the `done` command is received.
+
+### Robot and Control Station Communication
+
+The complete communication between the robot and the control station is:
+
+```text
+                 CONTROL STATION
+                 192.168.100.34
+                       |
+                       |
+                  TCP : 5000
+                       |
+                       v
+                    ROBOT
+                       |
+                       |
+                  UDP : 5001
+                       |
+                       v
+                 CONTROL STATION
+```
+
+In simple terms:
+
+```text
+Station ───── TCP ─────> Robot
+        Commands
+
+Station <──── UDP ───── Robot
+        Robot information
+```
+
+TCP is therefore used for **control**, while UDP is used for **monitoring the robot's information**.
+
+
 ## Project Goal
 
 The goal of this project is to create a control station capable of communicating with multiple robots through a network.
