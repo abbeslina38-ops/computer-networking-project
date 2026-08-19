@@ -1,173 +1,141 @@
 #include <iostream>
-#include <string>
-#include <queue>
-#include <mutex>
-#include <chrono>
 #include <thread>
-#include <functional>
-#include <cstring>
-#include <winsock2.h>
+#include <chrono>
+#include <winsock2.h>//socket
 #include <ws2tcpip.h>
-#include "Robot.h"
-#pragma comment(lib, "ws2_32.lib")
-using namespace std;
-//define
-Robot R1;Robot R2;bool sendinfo=false;bool sendinfo2=false;
-mutex robotmutex;
-//declaration
-//void sendrobotinfo1(bool &sendinfo);
-//void recvcommand1(bool &sendinfo);
-void sendrobotinfo2(bool &sendinfo2);
-void recvcommand2(bool &sendinfo2);
+#include <windows.h>
+#include <cstring>
+#include <functional>
+#include <string>
+#pragma comment(lib, "ws2_32.lib")//window
+ using namespace std ;
+ bool sendInfo=false;
+ //declaration
+ void recvrobotinfo(bool &sendInfo);
+ void sendcommand(bool &sendInfo);
 int main(){
-//define
-int id,id2 ;float x,x2,y,y2,velocity2,velocity;string state,state2;
-//window definition
+    std::cout << "Control Station starting..." << std::endl;
+//window
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
-//intialisation of robot1
-//cout<<"enter the robot id ";cin>>id;
-//cout<<"enter information of robot "<<id<<" :\n";
-//cout<<"enter the robot position x ";cin>>x;
-//cout<<"enter the robot position y ";cin>>y;
-//cout<<"enter the robot velocity ";cin>>velocity;
-//cout<<"enter the robot state ";cin.ignore();getline(cin,state);
-//R1.sett(id,x,y,velocity,state);
-//intialisation of robot2
-cout<<"enter the robot id ";cin>>id2;
-cout<<"enter information of robot "<<id2<<":\n";
-cout<<"enter the robot position x ";cin>>x2;
-cout<<"enter the robot position y ";cin>>y2;
-cout<<"enter the robot velocity ";cin>>velocity2;
-cout<<"enter the robot state ";cin.ignore();getline(cin,state2);
-R2.sett(id2,x2,y2,velocity2,state2);
+    WSAStartup(MAKEWORD(2, 2), &wsaData);//window
+
+
+cout << "=================================\n";
+cout << "     ROBOT CONTROL STATION\n";
+cout << "=================================\n";
+
 //thread
-//thread recv1(recvcommand1,ref(sendinfo));
-//thread sen1(sendrobotinfo1,ref(sendinfo));
-thread recv2(recvcommand2,ref(sendinfo2));
-thread sen2(sendrobotinfo2,ref(sendinfo2));
-//recv1.join();
-//sen1.join();
-recv2.join();
-sen2.join();
+thread sen(sendcommand,ref(sendInfo));
+thread rcv(recvrobotinfo,ref(sendInfo) );
+sen.join();
+rcv.join();
 
     return 0;
 }
-//functions defintions
-//void sendrobotinfo1(bool &sendinfo){ string robotinfo;
-////creating socket
-//SOCKET robotSocket1 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-//
-//    sockaddr_in station{};
-//
-//    station.sin_family = AF_INET;
-//    station.sin_port = htons(5001);
-//    inet_pton(AF_INET, "172.20.10.4", &station.sin_addr);
+void recvrobotinfo(bool &sendInfo){
+// socket
+ SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-//while(true){
-//if(sendinfo){
-//this_thread::sleep_for(chrono::seconds(1));
-////sending robot info
-//lock_guard<mutex> lock(robotmutex);
-//robotinfo =
-//    "id=" + to_string(R1.id) +
-//    ";x=" + to_string(R1.x) +
-//    ";y=" + to_string(R1.y) +
-//    ";velocity=" + to_string(R1.velocity) +
-//    ";state=" + R1.state;
-//
-//    sendto(robotSocket1,robotinfo.c_str(),robotinfo.size(),0,(sockaddr*)&station,sizeof(station));
-//    sendinfo=false;
-//}}}
-//void recvcommand1(bool &sendinfo){
-////creating socket
-// SOCKET clientSocket1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-//    sockaddr_in client{};
-//
-//    client.sin_family = AF_INET;
-//    client.sin_port = htons(5000);
-//    inet_pton(AF_INET, "172.20.10.4", &client.sin_addr);
-//
-//    connect(clientSocket1,(sockaddr*)&client ,sizeof(client));
-//
-//
-////receiving
-//queue<string> commands;
-//while (true){
-//char message1[100];
-//int bytrecvs=recv(clientSocket1,message1,sizeof(message1),0);
-//  string mg="";
-//   for(int i=0;i<bytrecvs;i++){
-//    if (message1[i]=='\n') break;
-//     mg+=message1[i];}
-//
-//     commands.push(mg);
-////modify
-//if(mg=="done"){break;}
-//lock_guard<mutex> lock(robotmutex);
-//if(commands.front()=="demarrer"){R1.state="EN-MARCHE";}
-//if(commands.front()=="arreter"){R1.state="ARRET";}
-//if(commands.front()=="changer la vitesse"){R1.velocity=30;}
-//sendinfo=true;
-//commands.pop();
-//}
+    sockaddr_in udp{};
 
-//}
-void sendrobotinfo2(bool &sendinfo2){ string robotinfo;
-//create socket
-SOCKET robotSocket2 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    udp.sin_family = AF_INET;
+    udp.sin_port = htons(5001);// socket bind
+    inet_pton(AF_INET, "172.20.10.4", &udp.sin_addr);
+// socket bind
+if (bind(udpSocket,(sockaddr*)&udp ,sizeof(udp)) != SOCKET_ERROR)
 
-    sockaddr_in station{};
+    std::cout << "UDP Bind successful!" << std::endl;
 
-    station.sin_family = AF_INET;
-    station.sin_port = htons(5001);
-    inet_pton(AF_INET, "172.20.10.4", &station.sin_addr);
-//sending robot info
-while(true){
-if(sendinfo2){
-this_thread::sleep_for(chrono::seconds(1));
 
-lock_guard<mutex> lock(robotmutex);
-robotinfo =
-    "id=" + to_string(R2.id) +
-    ";x=" + to_string(R2.x) +
-    ";y=" + to_string(R2.y) +
-    ";velocity=" + to_string(R2.velocity) +
-    ";state=" + R2.state;
 
-    sendto(robotSocket2,robotinfo.c_str(),robotinfo.size(),0,(sockaddr*)&station,sizeof(station));
-    sendinfo2=false;
-}}}
-void recvcommand2(bool &sendinfo2){
-    //create socket
- SOCKET clientSocket2 = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
-
-    sockaddr_in client{};
-
-    client.sin_family = AF_INET;
-    client.sin_port = htons(5000);
-    inet_pton(AF_INET, "172.20.10.4", &client.sin_addr);
-
-   connect(clientSocket2,(sockaddr*)&client ,sizeof(client)) ;
-//receiving
-queue<string> commands;
 while (true){
-char message2[100];
-int bytrecvs=recv(clientSocket2,message2,sizeof(message2),0);
-  string mg="";
-   for(int i=0;i<bytrecvs;i++){
-    if (message2[i]=='\n') break;
-     mg+=message2[i];}
+if(sendInfo){
+char message[500];
 
-     commands.push(mg);
-//modify
-if(mg=="done"){break;}
-lock_guard<mutex> lock(robotmutex);
-if(commands.front()=="demarrer"){R2.state="EN-MARCHE";}
-if(commands.front()=="arreter"){R2.state="ARRET";}
-if(commands.front()=="changer la vitesse"){R2.velocity=30;}
-sendinfo2=true;
-commands.pop();
+sockaddr_in station{};
+int stationSize = sizeof(station);
+
+int bytesReceived = recvfrom(udpSocket,message,sizeof(message),0,(sockaddr*)&station,&stationSize);
+cout<<"Rbt info: ";
+if (bytesReceived > 0){
+    for (int i = 0; i < bytesReceived; i++)
+    {
+     std::cout << message[i];
+    }
+}
+cout<<"\n";
+sendInfo=false;}
 }
 
+
 }
+void sendcommand(bool &sendInfo){
+   SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);//socket
+
+
+    if (serverSocket != INVALID_SOCKET)
+
+    std::cout << "TCP socket created successfully" << std::endl;
+
+    sockaddr_in server{};// socket bind
+
+    server.sin_family = AF_INET;// socket bind
+    server.sin_port = htons(5000);// socket bind
+    inet_pton(AF_INET, "172.20.10.x4", &server.sin_addr);// socket bind
+
+    if (bind(serverSocket,(sockaddr*)&server ,sizeof(server)) != SOCKET_ERROR)
+
+    std::cout << "Bind successful!" << std::endl;
+    // socket bind
+
+
+    if (listen(serverSocket, 2) != SOCKET_ERROR)
+
+    std::cout << "Server is listening..." << std::endl;
+SOCKET robotSocket[100];
+//robot1
+SOCKET robotSocket1 = accept(serverSocket, nullptr, nullptr);
+if(robotSocket1!= SOCKET_ERROR)cout << "Robot 1 connected!" << endl;
+robotSocket[0]=robotSocket1;
+//robot2
+SOCKET robotSocket2 = accept(serverSocket, nullptr, nullptr);
+if(robotSocket2!= SOCKET_ERROR)cout << "Robot 2 connected!" << endl;
+robotSocket[1]=robotSocket2;
+
+
+
+while(true){
+int id ; id=0;
+int choice; choice=0;sendInfo=false;
+cout << "=============MENU=============\n";
+cout << "1-enter command \n";
+cout << "2-exit\n";
+cin>>choice;
+
+if(choice==1){
+//sending commands
+  cout<<"enter the robot id ";cin>>id;
+  this_thread::sleep_for(chrono::seconds(1));
+  string message2;
+  cout<<"enter the command ";cin.ignore();getline(cin,message2);
+  send(robotSocket[id-1],message2.c_str(),message2.size(),0);
+  this_thread::sleep_for(chrono::seconds(1));
+  cout<<"\n";
+  cout<<"command to Robot "<<id<<" sent  : "<<message2;
+  cout<<"\n";sendInfo=true;
+  this_thread::sleep_for(chrono::seconds(2));
+
+}
+
+else if(choice==2){
+//quitting
+  const char*message3="done\n";
+  send(robotSocket1,message3,strlen(message3),0);
+  send(robotSocket2,message3,strlen(message3),0);
+  cout<<"\n";
+  cout<<"command sent  : "<<message3;
+  this_thread::sleep_for(chrono::seconds(1));
+  cout<<"\n communication finished\n "; break;}
+}
+
+  }
