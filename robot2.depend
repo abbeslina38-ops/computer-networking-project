@@ -1,0 +1,20 @@
+# depslib dependency file v1.0
+1787126474 source:c:\users\win 11\onedrive\documents\tp 1\robot2\main.cpp
+	<iostream>
+	<string>
+	<queue>
+	<mutex>
+	<chrono>
+	<thread>
+	<functional>
+	<cstring>
+	<winsock2.h>
+	<ws2tcpip.h>
+	"Robot.h"
+
+1787126117 source:c:\users\win 11\onedrive\documents\tp 1\robot2\src\robot.cpp
+	"Robot.h"
+
+1787126042 c:\users\win 11\onedrive\documents\tp 1\robot2\include\robot.h
+	<string>
+
