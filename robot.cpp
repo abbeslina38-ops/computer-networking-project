@@ -100,8 +100,3 @@ commands.pop();
 }
 
 }
-
-commands.pop();
-}
-
-}*/
